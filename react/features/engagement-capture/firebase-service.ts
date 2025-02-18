@@ -1,8 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getStorage, ref, uploadString } from 'firebase/storage';
-import { getLogger } from '../base/logging/functions';
-
-const logger = getLogger('features/engagement-capture/firebase-service');
+import logger from './logger';
 
 // Initialize Firebase configuration
 const firebaseConfig = {
@@ -20,6 +18,12 @@ let app;
 let storage;
 
 try {
+    logger.info('Initializing Firebase with config:', {
+        authDomain: firebaseConfig.authDomain,
+        projectId: firebaseConfig.projectId,
+        storageBucket: firebaseConfig.storageBucket
+    });
+    
     app = initializeApp(firebaseConfig);
     storage = getStorage(app);
     logger.info('Firebase initialized successfully');
@@ -42,21 +46,23 @@ interface IFramePayload {
  * @returns {Promise<void>}
  */
 export const uploadFrame = async (payload: IFramePayload): Promise<void> => {
+    const { participantId, meetingId, timestamp } = payload;
+    const framePath = `frames/${meetingId}/${participantId}/${timestamp}.png`;
+    
     try {
-        const { participantId, meetingId, timestamp, imageData } = payload;
+        logger.debug(`Starting frame upload to ${framePath}`);
         
         // Create a reference to the file location
-        const framePath = `frames/${meetingId}/${participantId}/${timestamp}.png`;
         const frameRef = ref(storage, framePath);
-
-        logger.debug(`Uploading frame to ${framePath}`);
+        logger.debug(`Created storage reference for ${framePath}`);
 
         // Upload the base64 string
-        await uploadString(frameRef, imageData, 'data_url');
+        logger.debug(`Uploading frame data (${payload.imageData.length} bytes)`);
+        await uploadString(frameRef, payload.imageData, 'data_url');
         
-        logger.debug(`Successfully uploaded frame to ${framePath}`);
+        logger.info(`Successfully uploaded frame to ${framePath}`);
     } catch (error) {
-        logger.error('Error uploading frame:', error);
+        logger.error(`Error uploading frame to ${framePath}:`, error);
         throw error;
     }
 }; 
