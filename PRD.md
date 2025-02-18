@@ -24,7 +24,28 @@
 
 ---
 
-## 2. Technical Approach
+## 2. User Stories
+- **Host Real-Time Monitoring:**  
+  *As a meeting host, I want to see live engagement data (e.g., sentiment scores and gaze metrics) displayed on a dashboard so that I can adapt my presentation in real time if I sense the audience is disengaging.*
+
+- **Engagement Alerts:**  
+  *As a meeting host, I want to receive alerts when overall engagement drops below a certain threshold so that I can take immediate action (e.g., ask questions or switch topics) to re-engage the participants.*
+
+- **Post-Meeting Summary Report:**  
+  *As a meeting host, I want a post-meeting report summarizing engagement trends, highlighting periods of high and low participation, so that I can review and improve future presentations.*
+
+- **Participant Insight Sharing:**  
+  *As an attendee, I want to see anonymized feedback on my engagement level compared to the meeting average so that I can reflect on my participation and improve my involvement in future sessions.*
+
+- **Trend Analysis Over Time:**  
+  *As a product manager, I want aggregated engagement data across multiple meetings to analyze long-term trends and identify potential areas for improvement in the conferencing experience.*
+
+- **Diagnostic Feedback for Support:**  
+  *As a technical support engineer, I want access to detailed logs and metrics regarding frame capture and processing so that I can quickly diagnose any issues impacting user engagement data collection.*
+
+---
+
+## 3. Technical Approach
 ### Architecture
 1. **Jitsi Plugin (React)**  
    - Captures video frames (1 FPS per participant).  
@@ -47,7 +68,7 @@
 
 ---
 
-## 3. Setup & Integration
+## 4. Setup & Integration
 ### Jitsi-Specific Setup
 1. **Local Development**:  
    - Clone the Jitsi Meet repository and start the Docker environment.  
@@ -59,7 +80,7 @@
 
 ---
 
-## 4. Implementation Phases
+## 5. Implementation Phases
 ### Phase 1: Frame Processing (Days 1-3)
 1. **Replicate Model Integration**:  
    - Use `cjwbw/vit-base-patch16-224` to classify emotions from frames.  
@@ -78,7 +99,7 @@
 
 ---
 
-## 5. Risks & Mitigations
+## 6. Risks & Mitigations
 | Risk                          | Mitigation                                                                 |  
 |-------------------------------|---------------------------------------------------------------------------|  
 | Replicate model latency       | Process frames asynchronously; show placeholder data while waiting.       |  
@@ -87,7 +108,7 @@
 
 ---
 
-## 6. Demo Plan
+## 7. Demo Plan
 **Scenario**: Pre-recorded meeting with 3 participants demonstrating varying engagement levels.  
 
 **Demo Flow**:  
@@ -97,7 +118,7 @@
 
 ---
 
-## 7. Appendices
+## 8. Appendices
 ### Replicate Model Details
 | Model                        | Task                     | Cost/Inference |  
 |------------------------------|--------------------------|----------------|  
