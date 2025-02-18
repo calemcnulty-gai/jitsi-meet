@@ -6,6 +6,7 @@ const { join, resolve } = require('path');
 const process = require('process');
 const webpack = require('webpack');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const Dotenv = require('dotenv-webpack');
 
 /**
  * The URL of the Jitsi Meet deployment to be proxy to in the context of
@@ -193,7 +194,10 @@ function getConfig(options = {}) {
                     allowAsyncCycles: false,
                     exclude: /node_modules/,
                     failOnError: false
-                })
+                }),
+            new Dotenv({
+                systemvars: true // Load all system variables as well
+            })
         ].filter(Boolean),
         resolve: {
             alias: {

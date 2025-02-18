@@ -22,5 +22,6 @@ import '../toolbox/middleware';
 import '../face-landmarks/middleware';
 import '../gifs/middleware';
 import '../whiteboard/middleware.web';
+import '../engagement-capture/middleware';
 
 import './middlewares.any';
