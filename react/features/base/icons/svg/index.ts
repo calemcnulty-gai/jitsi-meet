@@ -231,3 +231,5 @@ export {
     IconWifi3Bars,
     IconYahoo
 };
+
+export { default as IconEngagement } from './engagement.svg';

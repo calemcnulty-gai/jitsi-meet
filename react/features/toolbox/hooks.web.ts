@@ -72,7 +72,6 @@ import VideoSettingsButton from './components/web/VideoSettingsButton';
 import { isButtonEnabled, isDesktopShareButtonDisabled } from './functions.web';
 import { ICustomToolbarButton, IToolboxButton, ToolbarButton } from './types';
 
-
 const microphone = {
     key: 'microphone',
     Content: AudioSettingsButton,
@@ -315,10 +314,6 @@ export function useToolboxButtons(
         sharedvideo: shareVideo,
         shareaudio,
         noisesuppression: noiseSuppression,
-        whiteboard,
-        etherpad,
-        'select-background': virtualBackground,
-        stats: speakerStats,
         settings,
         shortcuts,
         embedmeeting: embed,

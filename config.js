@@ -135,6 +135,8 @@ var config = {
     // Disables self-view settings in UI
     // disableSelfViewSettings: false,
 
+    // Custom toolbar buttons
+
     // screenshotCapture : {
     //      Enables the screensharing capture feature.
     //      enabled: false,
@@ -206,7 +208,7 @@ var config = {
     // Specify audio quality stereo and opusMaxAverageBitrate values in order to enable HD audio.
     // Beware, by doing so, you are disabling echo cancellation, noise suppression and AGC.
     // Specify enableOpusDtx to enable support for opus-dtx where
-    // audio packets won’t be transmitted while participant is silent or muted.
+    // audio packets won't be transmitted while participant is silent or muted.
     // audioQuality: {
     //     stereo: false,
     //     opusMaxAverageBitrate: null, // Value to fit the 6000 to 510000 range.
