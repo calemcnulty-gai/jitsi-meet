@@ -498,7 +498,14 @@
         "whiteboardLimitReference": "For more information please visit",
         "whiteboardLimitReferenceUrl": "our website",
         "whiteboardLimitTitle": "Whiteboard usage restricted",
-        "yourEntireScreen": "Your entire screen"
+        "yourEntireScreen": "Your entire screen",
+        "engagementMetrics": "Engagement Metrics",
+        "engagementOverTime": "Engagement Over Time",
+        "totalEngagement": "Total Engagement",
+        "engaged": "Engaged",
+        "disengaged": "Disengaged",
+        "engagementDescription": "Shows participant engagement levels during the meeting",
+        "engagementTooltip": "Higher values indicate more active participation"
     },
     "documentSharing": {
         "title": "Shared Document"
@@ -1300,7 +1307,9 @@
             "videoblur": "Toggle video blur",
             "videomute": "Stop camera",
             "videomuteGUMPending": "Connecting your camera",
-            "videounmute": "Start camera"
+            "videounmute": "Start camera",
+            "engagementMetrics": "View engagement metrics",
+            "hideEngagementMetrics": "Hide engagement metrics"
         },
         "addPeople": "Add people to your call",
         "audioOnlyOff": "Disable low bandwidth mode",
@@ -1399,7 +1408,9 @@
         "videoSettings": "Video settings",
         "videomute": "Stop camera",
         "videomuteGUMPending": "Connecting your camera",
-        "videounmute": "Start camera"
+        "videounmute": "Start camera",
+        "showEngagementMetrics": "Show engagement metrics",
+        "hideEngagementMetrics": "Hide engagement metrics"
     },
     "transcribing": {
         "ccButtonTooltip": "Start / Stop subtitles",

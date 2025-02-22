@@ -1,75 +1,19 @@
 {
   "indexes": [
-    // Time series queries for analyses (raw data)
     {
       "collectionGroup": "analyses",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "timestamp", "order": "ASCENDING" },
-        { "fieldPath": "score", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "analyses",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "timestamp", "order": "DESCENDING" },
-        { "fieldPath": "score", "order": "DESCENDING" }
-      ]
-    },
-    // Time series queries for minute-level summaries
-    {
-      "collectionGroup": "summaries",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "startTime", "order": "ASCENDING" },
-        { "fieldPath": "averageScore", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "summaries",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "startTime", "order": "DESCENDING" },
-        { "fieldPath": "averageScore", "order": "DESCENDING" }
-      ]
-    },
-    // Participant queries
-    {
-      "collectionGroup": "participants",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "lastUpdate", "order": "DESCENDING" },
-        { "fieldPath": "averageScore", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "participants",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "totalFrames", "order": "DESCENDING" },
-        { "fieldPath": "averageScore", "order": "DESCENDING" }
+        {
+          "fieldPath": "timestamp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "processedAt",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],
-  "fieldOverrides": [
-    // Allow querying analyses across all meetings/participants
-    {
-      "collectionGroup": "analyses",
-      "fieldPath": "timestamp",
-      "indexes": [
-        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" },
-        { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
-      ]
-    },
-    // Allow querying summaries across all meetings/participants
-    {
-      "collectionGroup": "summaries",
-      "fieldPath": "startTime",
-      "indexes": [
-        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" },
-        { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
-      ]
-    }
-  ]
-} 
+  "fieldOverrides": []
+}

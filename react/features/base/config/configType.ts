@@ -653,4 +653,13 @@ export interface IConfig {
         disabled?: boolean;
     };
     whiteboard?: IWhiteboardConfig;
+    /**
+     * Engagement metrics configuration.
+     */
+    engagementMetrics?: {
+        /**
+         * Whether the engagement metrics feature is enabled.
+         */
+        enabled: boolean;
+    };
 }

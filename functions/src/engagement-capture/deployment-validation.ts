@@ -58,11 +58,9 @@ export function validateModelDeployment(): void {
 
     // Report validation results
     if (missingModels.length > 0 || invalidModels.length > 0) {
-        throw new Error(
-            'Model validation failed:\n'
+        throw new Error('Model validation failed:\n'
             + (missingModels.length > 0 ? `Missing models: ${missingModels.join(', ')}\n` : '')
-            + (invalidModels.length > 0 ? `Invalid models: ${invalidModels.join(', ')}` : '')
-        );
+            + (invalidModels.length > 0 ? `Invalid models: ${invalidModels.join(', ')}` : ''));
     }
 
     console.log('\n✅ All models validated successfully');

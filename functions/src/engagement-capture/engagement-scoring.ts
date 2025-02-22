@@ -24,8 +24,8 @@ export function calculateEngagementScore(
     // Calculate attention score based on facial landmarks and gaze
     const attention = calculateAttentionScore(facial, gaze);
 
-    // Calculate overall engagement score
-    const score = (eyeContact + emotionScore + attention) / 3;
+    // Calculate overall engagement score - weight eye contact and attention more heavily
+    const score = (eyeContact * 0.4 + emotionScore * 0.2 + attention * 0.4);
 
     return {
         score,
@@ -44,22 +44,25 @@ function calculateEyeContactScore(gaze: GazeAnalysis): number {
     }
 
     // Scale the confidence by how centered the gaze is
-    const gazeDeviation = Math.sqrt(
-        Math.pow(gaze.gazeVector.x, 2)
-        + Math.pow(gaze.gazeVector.y, 2),
-    );
+    const gazeDeviation = Math.sqrt(Math.pow(gaze.gazeVector.x, 2)
+        + Math.pow(gaze.gazeVector.y, 2),);
 
     return Math.max(0, 1 - gazeDeviation) * gaze.confidence;
 }
 
 function calculateEmotionScore(emotion: EmotionAnalysis): number {
-    // Weight positive emotions more heavily
+    // Weight emotions based on engagement level:
+    // - happy: strongly engaged (1.2x)
+    // - angry: engaged (1.0x)
+    // - surprised: engaged (0.8x)
+    // - sad: weakly engaged (0.4x)
+    // - neutral: disengaged (-0.8x)
     const score = (
         emotion.emotions.happy * 1.2
-        + emotion.emotions.neutral * 0.8
-        + emotion.emotions.surprised * 0.6
-        - emotion.emotions.sad * 0.4
-        - emotion.emotions.angry * 0.6
+        + emotion.emotions.angry * 1.0
+        + emotion.emotions.surprised * 0.8
+        + emotion.emotions.sad * 0.4
+        - emotion.emotions.neutral * 0.8
     );
 
     return Math.max(0, Math.min(1, score));

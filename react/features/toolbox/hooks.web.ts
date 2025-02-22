@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { batch, useDispatch, useSelector } from 'react-redux';
+import { connect } from 'react-redux';
 
 import { ACTION_SHORTCUT_TRIGGERED, createShortcutEvent } from '../analytics/AnalyticsEvents';
 import { sendAnalytics } from '../analytics/functions';
@@ -57,6 +58,7 @@ import VideoQualityButton from '../video-quality/components/VideoQualityButton.w
 import VideoQualityDialog from '../video-quality/components/VideoQualityDialog.web';
 import { useVirtualBackgroundButton } from '../virtual-background/hooks';
 import { useWhiteboardButton } from '../whiteboard/hooks';
+import { useEngagementMetricsButton } from '../engagement-metrics/hooks';
 
 import { setFullScreen } from './actions.web';
 import DownloadButton from './components/DownloadButton';
@@ -71,6 +73,14 @@ import ToggleCameraButton from './components/web/ToggleCameraButton';
 import VideoSettingsButton from './components/web/VideoSettingsButton';
 import { isButtonEnabled, isDesktopShareButtonDisabled } from './functions.web';
 import { ICustomToolbarButton, IToolboxButton, ToolbarButton } from './types';
+import EngagementMetricsButton from '../engagement-metrics/components/web/EngagementMetricsButton';
+import { translate } from '../base/i18n/functions';
+import { IconEngagement } from '../base/icons/svg';
+import AbstractButton, { IProps as AbstractButtonProps } from '../base/toolbox/components/AbstractButton';
+import { setOverflowMenuVisible } from '../toolbox/actions.web';
+import { setEngagementMetricsOpen } from '../engagement-metrics/actions';
+import { isEngagementMetricsButtonVisible, isEngagementMetricsVisible } from '../engagement-metrics/functions';
+
 
 const microphone = {
     key: 'microphone',
@@ -169,6 +179,12 @@ const help = {
     key: 'help',
     Content: HelpButton,
     group: 4
+};
+
+const engagementMetrics = {
+    key: 'engagement-metrics',
+    Content: EngagementMetricsButton,
+    group: 3
 };
 
 /**
@@ -291,6 +307,7 @@ export function useToolboxButtons(
     const feedback = useFeedbackButton();
     const _download = useDownloadButton();
     const _help = useHelpButton();
+    const engagementMetricsButton = useEngagementMetricsButton();
 
     const buttons: { [key in ToolbarButton]?: IToolboxButton; } = {
         microphone,
@@ -314,12 +331,17 @@ export function useToolboxButtons(
         sharedvideo: shareVideo,
         shareaudio,
         noisesuppression: noiseSuppression,
+        whiteboard: whiteboard,
+        etherpad,
+        'select-background': virtualBackground,
+        stats: speakerStats,
         settings,
         shortcuts,
         embedmeeting: embed,
         feedback,
         download: _download,
-        help: _help
+        help: _help,
+        'engagement-metrics': engagementMetricsButton
     };
     const buttonKeys = Object.keys(buttons) as ToolbarButton[];
 

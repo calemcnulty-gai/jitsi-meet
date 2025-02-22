@@ -33,8 +33,25 @@ module.exports = {
     'valid-jsdoc': 'off',
     'camelcase': 'off',
     'comma-dangle': ['error', 'always-multiline'],
-    'operator-linebreak': ['error', 'before'],
+    'operator-linebreak': ['error', 'before', {
+      'overrides': {
+        '=': 'after',
+        '+=': 'after',
+        '-=': 'after',
+        '*=': 'after',
+        '/=': 'after',
+      },
+    }],
     'no-trailing-spaces': 'error',
     'eol-last': 'error',
+    'implicit-arrow-linebreak': ['error', 'beside'],
+    'function-paren-newline': ['error', 'multiline'],
+    'object-property-newline': ['error', { 
+      'allowAllPropertiesOnSameLine': true,
+    }],
+    'object-curly-newline': ['error', {
+      'multiline': true,
+      'consistent': true,
+    }],
   },
 };

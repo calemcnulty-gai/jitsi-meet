@@ -18,17 +18,21 @@ The engagement-capture plugin is designed to capture and process video frames fo
 - **Integration Points:**  
   Registered using the `MiddlewareRegistry` and imported as part of the overall middleware bundle in `react/features/app/middlewares.any.ts`.
 
-### b. Frame Capture Service (File: `react/features/engagement-capture/frame-capture-service.ts`)
+### b. Frame Capture Service (File: `react/features/engagement-capture/frameCaptureService.ts`)
 - **Purpose:**  
-  Implements the core logic for capturing frames from video streams.
+  Implements efficient frame capture directly from participant video streams using the ImageCapture API.
 - **Key Responsibilities:**  
-  - Access the video element from a given Jitsi track.
-  - Create a canvas element to draw the current frame.
-  - Convert the canvas content to a JPEG image (as a base64 string).
-  - Set up a periodic capture interval (default 30 seconds) and handle cleanup when the track is disposed.
-  - Call the `uploadFrame` function from the Firebase service to store the captured image.
+  - Access raw media streams from JitsiTrack instances
+  - Use ImageCapture API for efficient frame grabbing
+  - Convert captured frames to JPEG blobs using OffscreenCanvas
+  - Manage periodic capture sessions with proper cleanup
+  - Handle error cases gracefully with automatic session termination
 - **Notes for Modification:**  
-  Adjust the capture interval or image format as needed for performance improvements or quality requirements.
+  - Frame capture interval is configurable (default 30 seconds)
+  - Image quality is set to 0.8 for JPEG compression
+  - Frames are uploaded to Firebase Storage at /frames/{meetingId}/{participantEmail | participantId}/{timestamp}.png
+  - Uses OffscreenCanvas for better performance
+  - Operates independently of UI state
 
 ### c. Reducer (File: `react/features/engagement-capture/reducer.ts`)
 - **Purpose:**  
@@ -49,12 +53,28 @@ The engagement-capture plugin is designed to capture and process video frames fo
 - **Usage:**  
   These actions interface with the middleware and reducer to ensure proper state transitions.
 
-### e. Firebase Integration (File: `react/features/engagement-capture/firebase-service.ts`)
+### e. Firebase Service (File: `react/features/engagement-capture/firebaseService.ts`)
 - **Purpose:**  
   Handles configuration and uploading of captured frames to Firebase Storage.
 - **Key Responsibilities:**  
-  - Initialize Firebase using project-specific configuration.
-  - Provide an `uploadFrame` function that uploads the base64 image along with metadata (participant ID, meeting ID, timestamp).
+  - Initialize Firebase using configuration from environment variables
+  - Validate required configuration fields on initialization
+  - Upload captured frames to Firebase Storage with proper path structure
+  - Handle upload errors and retries
+  - Manage Firebase Storage lifecycle
+- **Storage Path Structure:**
+  - Root: /frames
+  - Meeting ID: /{meetingId}
+  - Participant: /{participantEmail | participantId}
+  - File: /{timestamp}.png
+- **Configuration:**
+  Required environment variables in .env:
+  - REACT_APP_FIREBASE_API_KEY
+  - REACT_APP_FIREBASE_AUTH_DOMAIN
+  - REACT_APP_FIREBASE_PROJECT_ID
+  - REACT_APP_FIREBASE_STORAGE_BUCKET
+  - REACT_APP_FIREBASE_MESSAGING_SENDER_ID
+  - REACT_APP_FIREBASE_APP_ID
 - **Future Enhancements:**  
   Currently open to public access; may later be secured with auth integration.
 
@@ -115,7 +135,7 @@ Interactions with external systems and APIs are managed via dedicated modules.
 - **Purpose:**  
   Enables communication between the Jitsi Meet application and external clients.
 - **Notes:**  
-  While this module handles general external messaging, it’s separate from the engagement-capture functionality but may be extended in the future for richer integrations.
+  While this module handles general external messaging, it's separate from the engagement-capture functionality but may be extended in the future for richer integrations.
 
 ### b. Communication Layer
 - **Roles:**  
@@ -132,7 +152,7 @@ This component is critical for transferring captured frames to the backend.
   Configures Firebase with necessary credentials and endpoints.
 - **Key Responsibilities:**  
   - Initialize the Firebase app and storage.
-  - Provide API methods (e.g., `uploadFrame`) for storing engagement frames.
+  - Provide an `uploadFrame` function that uploads the base64 image along with metadata (participant ID, meeting ID, timestamp).
 - **Future Considerations:**  
   Security can be tightened later with Firebase authentication and custom token verification.
 

@@ -9,6 +9,8 @@ import { getLocalParticipant, isLocalParticipantModerator } from '../../../base/
 import ContextMenu from '../../../base/ui/components/web/ContextMenu';
 import { isReactionsButtonEnabled, shouldDisplayReactionsButtons } from '../../../reactions/functions.web';
 import { isTranscribing } from '../../../transcribing/functions';
+import EngagementMetricsButton from '../../../engagement-metrics/components/web/EngagementMetricsButton';
+import { isEngagementMetricsEnabled } from '../../../engagement-metrics/functions';
 import {
     setHangupMenuVisible,
     setOverflowMenuVisible,
@@ -92,6 +94,7 @@ export default function Toolbox({
     const jwt = useSelector((state: IReduxState) => state['features/base/jwt'].jwt);
     const localParticipant = useSelector(getLocalParticipant);
     const transcribing = useSelector(isTranscribing);
+    const isEngagementEnabled = useSelector(isEngagementMetricsEnabled);
 
     // Do not convert to selector, it returns new array and will cause re-rendering of toolbox on every action.
     const jwtDisabledButtons = getJwtDisabledButtons(transcribing, isModerator, jwt, localParticipant?.features);
@@ -232,6 +235,15 @@ export default function Toolbox({
         jwtDisabledButtons,
         mainToolbarButtonsThresholds
     });
+
+    // Add debug logging
+    console.log('[Toolbox] Rendering toolbar with:', {
+        isEngagementEnabled,
+        isModerator,
+        mainMenuButtons: mainMenuButtons.map(b => b.key),
+        overflowButtons: overflowMenuButtons.map(b => b.key)
+    });
+
     const raiseHandInOverflowMenu = overflowMenuButtons.some(({ key }) => key === 'raisehand');
     const showReactionsInOverflowMenu = _shouldDisplayReactionsButtons
         && (
@@ -261,6 +273,12 @@ export default function Toolbox({
                                 { ...rest }
                                 buttonKey = { key }
                                 key = { key } />))}
+
+                        {/* BRUTE FORCE ENGAGEMENT METRICS BUTTON */}
+                        <EngagementMetricsButton
+                            buttonKey = 'engagement-metrics'
+                            key = 'engagement-metrics'
+                            visible = { true } />
 
                         {Boolean(overflowMenuButtons.length) && (
                             <OverflowMenuButton

@@ -2,7 +2,7 @@
   "name": "functions",
   "version": "1.0.0",
   "scripts": {
-    "prebuild": "rm -rf lib dist && mkdir -p lib/models dist/models && cp -r node_modules/@vladmandic/human/models/* lib/models/ && cp -r lib/models/* src/models/ && cp -r node_modules/@vladmandic/human/models/* dist/models/",
+    "prebuild": "rm -rf lib dist && mkdir -p lib/models && cp -r node_modules/@vladmandic/human/models/{blazeface*,emotion*,iris*,faceres*,facemesh*} lib/models/",
     "build": "npm run prebuild && tsc",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
@@ -41,7 +41,6 @@
   },
   "private": true,
   "files": [
-    "lib/**/*",
-    "models/**/*"
+    "lib/**/*"
   ]
 }

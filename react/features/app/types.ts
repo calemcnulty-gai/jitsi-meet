@@ -82,6 +82,7 @@ import { IVirtualBackground } from '../virtual-background/reducer';
 import { IVisitorsState } from '../visitors/reducer';
 import { IWebHid } from '../web-hid/reducer';
 import { IWhiteboardState } from '../whiteboard/reducer';
+import { IEngagementMetricsState } from '../engagement-metrics/reducer';
 
 export interface IStore {
     dispatch: ThunkDispatch<IReduxState, void, AnyAction>;
@@ -125,6 +126,7 @@ export interface IReduxState {
     'features/dropbox': IDropboxState;
     'features/dynamic-branding': IDynamicBrandingState;
     'features/e2ee': IE2EEState;
+    'features/engagement-metrics': IEngagementMetricsState;
     'features/etherpad': IEtherpadState;
     'features/face-landmarks': IFaceLandmarksState;
     'features/feedback': IFeedbackState;

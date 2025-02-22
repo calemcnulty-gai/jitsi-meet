@@ -92,132 +92,70 @@ export const processFrame = onObjectFinalized({
             score,
         });
 
-        // Store the results in Storage
-        const resultPath = `results/${filePath}`;
-        const resultData = JSON.stringify({
-            analysis,
-            score,
-            timestamp,
-            processedAt: new Date().toISOString(),
-        }, null, 2);
-
-        await bucket.file(resultPath).save(resultData, {
-            contentType: 'application/json',
-            metadata: {
-                score: score.toString(),
-                processedAt: new Date().toISOString(),
-            },
-        });
-
         // Extract meeting ID and participant ID from file path
         // Expected format: frames/meeting-id/participant-id/frame-timestamp.jpg
-        const [, meetingId, participantId] = filePath.split('/');
+        const [, meetingId, encodedParticipantName] = filePath.split('/');
 
-        if (!meetingId || !participantId) {
+        if (!meetingId || !encodedParticipantName) {
             throw new Error(`Invalid file path format: ${filePath}`);
         }
 
-        // Store results in Firestore
-        const analysisRef = db.collection('meetings').doc(meetingId)
-            .collection('participants').doc(participantId)
+        // Decode the participant name from the URL encoded format
+        const participantId = decodeURIComponent(encodedParticipantName);
+
+        // Store results in Firestore at /meetings/{meetingId}/analyses/{timestamp}
+        const analysisRef = db.collection('meetings')
+            .doc(meetingId)
             .collection('analyses');
 
-        // Use timestamp as document ID for efficient time-based queries
-        const timeBasedId = `${timestamp}`; // Convert to string for document ID
-        await analysisRef.doc(timeBasedId).set({
+        // Create the analysis document
+        const analysisData = {
             timestamp,
             processedAt: new Date(),
             score,
-            facial: analysis.facial,
-            emotion: analysis.emotion,
-            gaze: analysis.gaze,
-            storagePath: resultPath,
-        });
-
-        // Update aggregate stats in participant document
-        const participantRef = db.collection('meetings').doc(meetingId)
-            .collection('participants').doc(participantId);
-
-        await db.runTransaction(async (transaction) => {
-            const doc = await transaction.get(participantRef);
-            const data = doc.data() || {
-                totalFrames: 0,
-                totalScore: 0,
-                firstFrame: timestamp,
-                lastFrame: timestamp,
-                // Add time series metadata for efficient querying
-                timeSeriesStart: timestamp,
-                timeSeriesEnd: timestamp,
-                samplingRate: 0, // Will be calculated
-                totalSamples: 0,
-            };
-
-            // Calculate approximate sampling rate (in milliseconds)
-            const newSamplingRate = data.totalFrames > 0
-                ? ((timestamp - data.timeSeriesStart) / data.totalFrames)
-                : 0;
-
-            transaction.set(participantRef, {
-                totalFrames: data.totalFrames + 1,
-                totalScore: data.totalScore + score,
-                averageScore: (data.totalScore + score) / (data.totalFrames + 1),
-                firstFrame: Math.min(data.firstFrame, timestamp),
-                lastFrame: Math.max(data.lastFrame, timestamp),
-                timeSeriesStart: Math.min(data.timeSeriesStart, timestamp),
-                timeSeriesEnd: Math.max(data.timeSeriesEnd, timestamp),
-                samplingRate: newSamplingRate,
-                totalSamples: data.totalFrames + 1,
-                lastUpdate: new Date(),
-            }, { merge: true });
-        });
-
-        // Store time-bucketed summaries for longer time ranges
-        const minute = Math.floor(timestamp / (60 * 1000)); // 1-minute buckets
-        const summaryRef = db.collection('meetings').doc(meetingId)
-            .collection('participants').doc(participantId)
-            .collection('summaries').doc(`${minute}`);
-
-        await summaryRef.set({
-            startTime: minute * 60 * 1000,
-            endTime: (minute + 1) * 60 * 1000,
-            samples: admin.firestore.FieldValue.increment(1),
-            totalScore: admin.firestore.FieldValue.increment(Number(score)),
-            averageScore: Number(score), // Will be updated in transaction
-            emotions: {
-                happy: admin.firestore.FieldValue.increment(
-                    analysis.emotion.emotions.happy
-                ),
-                sad: admin.firestore.FieldValue.increment(
-                    analysis.emotion.emotions.sad
-                ),
-                angry: admin.firestore.FieldValue.increment(
-                    analysis.emotion.emotions.angry
-                ),
-                surprised: admin.firestore.FieldValue.increment(
-                    analysis.emotion.emotions.surprised
-                ),
-                neutral: admin.firestore.FieldValue.increment(analysis.emotion.emotions.neutral),
+            participantId,
+            analysis: {
+                facial: analysis.facial,
+                emotion: analysis.emotion,
+                gaze: analysis.gaze,
             },
-        }, { merge: true });
+            storagePath: filePath,
+        };
 
-        // Update the average score for the minute bucket
-        await db.runTransaction(async (transaction) => {
-            const summaryDoc = await transaction.get(summaryRef);
-            const summaryData = summaryDoc.data();
-            if (summaryData) {
-                transaction.update(summaryRef, {
-                    averageScore: summaryData.totalScore / summaryData.samples,
-                });
-            }
+        // Log the data we're about to write
+        logger.info('[processFrame] Writing analysis to Firestore', {
+            meetingId,
+            participantId,
+            analysisData,
         });
+
+        try {
+            // Write the analysis data
+            await analysisRef.doc(`${participantId}-${timestamp}.json`).set(analysisData);
+
+            logger.info('[processFrame] Successfully wrote analysis to Firestore', {
+                meetingId,
+                participantId,
+                timestamp,
+            });
+        } catch (error) {
+            logger.error('[processFrame] Failed to write analysis to Firestore', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined,
+                meetingId,
+                participantId,
+            });
+            throw error;
+        }
+
+        // Clean up the original frame from Storage
+        await bucket.file(filePath).delete();
 
         logger.info('[processFrame] Successfully processed frame', {
             filePath,
-            resultPath,
             score,
             meetingId,
             participantId,
-            minute,
         });
     } catch (error) {
         logger.error('[processFrame] Error processing frame', {

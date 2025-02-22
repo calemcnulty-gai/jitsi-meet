@@ -9,6 +9,11 @@
 - DO NOT use yarn
 - If using npm, remember the save flag: `npm install --save`
 
+## Current directory
+- Before making any changes, always check the current directory
+  to ensure you're in the right place
+- Do this before running any terminal commands, too
+
 ## Plugin Development
 - When developing plugins or features, NEVER modify core Jitsi Meet code
 - All new functionality should be self-contained within the plugin/feature directory

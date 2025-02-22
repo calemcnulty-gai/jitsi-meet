@@ -28,7 +28,8 @@ try {
         '@vladmandic contents:',
         fs.readdirSync('/workspace/node_modules/@vladmandic')
     );
-    console.log('human contents:',
+    console.log(
+        'human contents:',
         fs.readdirSync('/workspace/node_modules/@vladmandic/human')
     );
     console.log(
@@ -49,7 +50,8 @@ console.log(
     fs.existsSync(path.dirname(modelPath))
 );
 try {
-    console.log('Parent directory contents:',
+    console.log(
+        'Parent directory contents:',
         fs.readdirSync(path.dirname(modelPath))
     );
 } catch (err) {
@@ -76,11 +78,10 @@ if (fs.existsSync(modelPath)) {
             if (fs.existsSync(modelFilePath)) {
                 const stats = fs.statSync(modelFilePath);
                 console.log(`  - Size: ${stats.size} bytes`);
-                console.log(
-                    `  - Readable: ${fs.accessSync(
-                        modelFilePath,
-                        fs.constants.R_OK) === undefined}`
-                );
+                console.log(`  - Readable: ${fs.accessSync(
+                    modelFilePath,
+                    fs.constants.R_OK
+                ) === undefined}`);
                 console.log(`  - File permissions: ${stats.mode}`);
                 // Try to read first few bytes to verify access
                 try {
@@ -110,7 +111,6 @@ if (fs.existsSync(modelPath)) {
 const config = {
     modelBasePath: modelUrl,
     backend: 'tensorflow' as const,
-    debug: true,
     filter: {
         enabled: true,
         equalization: false,
@@ -129,15 +129,13 @@ const config = {
         description: { enabled: true },
         emotion: {
             enabled: true,
-            minConfidence: 0.5,
+            minConfidence: 0.2,
         },
     },
-    // Disable unnecessary models
     body: { enabled: false },
     hand: { enabled: false },
     object: { enabled: false },
     gesture: { enabled: false },
-    // Serverless optimizations
     async: true,
     warmup: 'none' as const,
     cacheModels: true,
@@ -216,9 +214,9 @@ export async function analyzeImage(imageData: string): Promise<HumanAnalysisResu
 
         // Extract emotion analysis
         const emotions = face.emotion || [];
-        const dominantEmotion = emotions.reduce((prev, current) =>
-            (current.score > prev.score) ? current : prev,
-        { score: 0, emotion: 'neutral' as Human.Emotion }
+        const dominantEmotion = emotions.reduce(
+            (prev, current) => (current.score > prev.score) ? current : prev,
+            { score: 0, emotion: 'neutral' as Human.Emotion }
         );
 
         const emotion: EmotionAnalysis = {
@@ -311,22 +309,31 @@ function isEyesOpen(mesh: Human.Point[]): boolean {
     return (leftEyeOpenness > threshold) && (rightEyeOpenness > threshold);
 }
 
+/**
+ * Determines if the user is looking at the screen based on eye positions
+ * relative to the face center and head pose
+ */
 function isLookingAtScreen(face: Human.FaceResult): boolean {
-    if (!face.rotation?.gaze || !face.rotation?.angle) {
-        return false;
-    }
+    if (!face.mesh || !face.box) return false;
 
-    // Enhanced attention detection using multiple factors
-    const yawThreshold = Math.PI / 6; // 30 degrees
-    const pitchThreshold = Math.PI / 9; // 20 degrees
-    const gazeThreshold = 0.5;
+    // Get face center - box coordinates are [x0, y0, x1, y1]
+    const faceCenter = {
+        x: (face.box[0] + face.box[2]) / 2,
+        y: (face.box[1] + face.box[3]) / 2,
+    };
 
-    const isForwardFacing
-        = Math.abs(face.rotation.angle.yaw) < yawThreshold
-        && Math.abs(face.rotation.angle.pitch) < pitchThreshold;
+    // Get average eye position
+    const leftEye = extractEyePosition(face.mesh, 'left');
+    const rightEye = extractEyePosition(face.mesh, 'right');
+    const avgEyeY = (leftEye.y + rightEye.y) / 2;
 
-    const isGazingForward = face.rotation.gaze.strength > gazeThreshold;
-    const hasGoodConfidence = (face.score || 0) > 0.5;
+    // Check if eyes are roughly centered vertically in face
+    const faceHeight = face.box[3] - face.box[1];
+    const verticalDeviation = Math.abs(avgEyeY - faceCenter.y) / faceHeight;
 
-    return isForwardFacing && isGazingForward && hasGoodConfidence;
+    // Check if head rotation is within reasonable bounds for screen viewing
+    const yawAngle = Math.abs(face.rotation?.angle?.yaw || 0);
+    const pitchAngle = Math.abs(face.rotation?.angle?.pitch || 0);
+
+    return verticalDeviation < 0.3 && yawAngle < 0.5 && pitchAngle < 0.3;
 }
