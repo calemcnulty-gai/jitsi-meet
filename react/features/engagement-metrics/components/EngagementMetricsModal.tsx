@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { List, AutoSizer } from 'react-virtualized';
 import Dialog from '../../base/ui/components/web/Dialog';
 import { IReduxState } from '../../app/types';
 import { subscribeToEngagementMetrics, initializeFirebase } from '../firebaseService';
@@ -77,6 +78,11 @@ interface IMetricData {
     storagePath: string;
 }
 
+// Extracted constants
+const CHART_HEIGHT = 300;
+const CHART_MARGIN = 20;
+const PARTICIPANT_SECTION_HEIGHT = 400;
+const DATA_WINDOW_MINUTES = 5;
 const COLORS = {
     happy: '#4CAF50',
     sad: '#2196F3',
@@ -97,6 +103,133 @@ const firebaseConfig = {
     appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
+// Memoized chart components
+const MemoizedLineChart: React.FC<{ data: IMetricData[] }> = React.memo(({ data }) => (
+    <ResponsiveContainer height={CHART_HEIGHT}>
+        <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+                dataKey="timestamp" 
+                type="number"
+                domain={['dataMin', 'dataMax']}
+                tickFormatter={(timestamp) => new Date(timestamp).toLocaleTimeString()}
+            />
+            <YAxis domain={[0, 1]} />
+            <Tooltip
+                labelFormatter={(timestamp) => new Date(Number(timestamp)).toLocaleString()}
+                contentStyle={{ background: '#fff', border: '1px solid #ccc' }}
+            />
+            <Legend />
+            <Line 
+                type="monotone" 
+                dataKey="score.score" 
+                stroke="#8884d8" 
+                name="Engagement Score"
+                dot={false}
+                isAnimationActive={false}
+            />
+        </LineChart>
+    </ResponsiveContainer>
+));
+
+const MemoizedPieChart: React.FC<{ data: Array<{ name: string; value: number }> }> = React.memo(({ data }) => (
+    <ResponsiveContainer height={CHART_HEIGHT}>
+        <PieChart>
+            <Pie
+                data={data}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                isAnimationActive={false}
+            >
+                {data.map((entry, index) => (
+                    <Cell key={entry.name} fill={EMOTION_COLORS[index % EMOTION_COLORS.length]} />
+                ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+        </PieChart>
+    </ResponsiveContainer>
+));
+
+// Extracted participant section component
+const ParticipantSection: React.FC<{
+    participantId: string;
+    data: IMetricData[];
+}> = React.memo(({ participantId, data }) => {
+    const emotionData = useMemo(() => getAggregatedEmotionData(data), [data]);
+    
+    return (
+        <div className='metrics-section'>
+            <h3>Participant: {participantId}</h3>
+            <div style={{ display: 'flex', gap: CHART_MARGIN }}>
+                <div style={{ flex: '2' }}>
+                    <MemoizedLineChart data={data} />
+                </div>
+                <div style={{ flex: '1' }}>
+                    <MemoizedPieChart data={emotionData} />
+                </div>
+            </div>
+        </div>
+    );
+});
+
+// Optimized data processing functions
+const processMetricsData = (data: IMetricData[]): Map<string, IMetricData[]> => {
+    const dataMap = new Map<string, IMetricData[]>();
+    const cutoffTime = Date.now() - (DATA_WINDOW_MINUTES * 60 * 1000);
+    
+    data.forEach(metric => {
+        if (metric.timestamp < cutoffTime) return;
+        
+        const existing = dataMap.get(metric.participantId) || [];
+        dataMap.set(metric.participantId, [...existing, metric]);
+    });
+    
+    // Sort data for each participant
+    dataMap.forEach((metrics, participantId) => {
+        dataMap.set(participantId, metrics.sort((a, b) => a.timestamp - b.timestamp));
+    });
+    
+    return dataMap;
+};
+
+const getAggregatedEmotionData = (data: IMetricData[]) => {
+    const emotionTotals = {
+        happy: 0,
+        sad: 0,
+        angry: 0,
+        surprised: 0,
+        neutral: 0
+    };
+    let totalConfidence = 0;
+    let validEmotionCount = 0;
+
+    // Process only the last 100 data points for performance
+    const recentData = data.slice(-100);
+    
+    recentData.forEach(metric => {
+        const emotions = metric.analysis?.emotion?.emotions;
+        const confidence = metric.analysis?.emotion?.confidence || 0;
+        
+        if (emotions && confidence > 0.5) {
+            Object.entries(emotions).forEach(([emotion, value]) => {
+                emotionTotals[emotion as keyof typeof emotionTotals] += value * confidence;
+            });
+            totalConfidence += confidence;
+            validEmotionCount++;
+        }
+    });
+
+    if (validEmotionCount === 0) return [];
+
+    return Object.entries(emotionTotals).map(([emotion, total]) => ({
+        name: emotion,
+        value: total / (validEmotionCount || 1)
+    }));
+};
+
 /**
  * Component for displaying real-time engagement metrics in a modal.
  *
@@ -110,9 +243,7 @@ const EngagementMetricsModal: React.FC<IProps> = ({ onClose }) => {
     
     const metricsData = useSelector((state: IReduxState) => {
         try {
-            const data = state['features/engagement-metrics'].metricsData;
-            logger.info('Modal received metrics data:', data);
-            return data as IMetricData[];
+            return state['features/engagement-metrics'].metricsData as IMetricData[];
         } catch (err) {
             logger.error('Error accessing metrics data:', err);
             setError('Error accessing metrics data');
@@ -120,26 +251,48 @@ const EngagementMetricsModal: React.FC<IProps> = ({ onClose }) => {
         }
     });
 
+    const processedData = useMemo(() => {
+        try {
+            return Array.from(processMetricsData(metricsData).entries())
+                .map(([participantId, data]) => ({
+                    participantId,
+                    data
+                }));
+        } catch (err) {
+            logger.error('Error processing metrics data:', err);
+            setError('Error processing metrics data');
+            return [];
+        }
+    }, [metricsData]);
+
+    const handleMetricsUpdate = useCallback((data: IMetricData[]) => {
+        try {
+            dispatch(updateMetricsData(data));
+        } catch (err) {
+            logger.error('Error in metrics update:', err);
+            setError('Error processing metrics update');
+        }
+    }, [dispatch]);
+
     useEffect(() => {
         let unsubscribe: (() => void) | undefined;
 
         const setupFirebase = async () => {
             try {
-                await initializeFirebase(firebaseConfig);
+                if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+                    throw new Error('Missing required Firebase configuration');
+                }
+                
+                await initializeFirebase({
+                    ...firebaseConfig,
+                    apiKey: firebaseConfig.apiKey as string,
+                    projectId: firebaseConfig.projectId as string
+                });
 
                 if (conference?.room) {
-                    const roomUrl = conference.room.toString();
-                    const meetingId = roomUrl.split('/').pop();
+                    const meetingId = conference.room.toString().split('/').pop();
                     if (meetingId) {
-                        unsubscribe = subscribeToEngagementMetrics(meetingId, (data) => {
-                            try {
-                                logger.info('Subscription callback received data:', data);
-                                dispatch(updateMetricsData(data));
-                            } catch (err) {
-                                logger.error('Error in subscription callback:', err);
-                                setError('Error processing metrics update');
-                            }
-                        });
+                        unsubscribe = subscribeToEngagementMetrics(meetingId, handleMetricsUpdate);
                     }
                 }
             } catch (error) {
@@ -149,188 +302,45 @@ const EngagementMetricsModal: React.FC<IProps> = ({ onClose }) => {
         };
 
         setupFirebase();
+        return () => unsubscribe?.();
+    }, [conference, handleMetricsUpdate]);
 
-        return () => {
-            try {
-                if (unsubscribe) {
-                    unsubscribe();
-                }
-            } catch (err) {
-                logger.error('Error unsubscribing:', err);
-            }
-        };
-    }, [conference, dispatch]);
-
-    // Group data by participant
-    const participantData = React.useMemo(() => {
-        try {
-            logger.info('Grouping metrics data:', metricsData);
-            const dataMap = new Map<string, IMetricData[]>();
-            metricsData.forEach(data => {
-                logger.debug('Processing metric:', data);
-                const existing = dataMap.get(data.participantId) || [];
-                dataMap.set(data.participantId, [...existing, data]);
-            });
-            const result = Array.from(dataMap.entries()).map(([participantId, data]) => ({
-                participantId,
-                data: data.sort((a, b) => a.timestamp - b.timestamp)
-            }));
-            logger.info('Grouped participant data:', result);
-            return result;
-        } catch (err) {
-            logger.error('Error grouping participant data:', err);
-            setError('Error processing participant data');
-            return [];
-        }
-    }, [metricsData]);
-
-    // Function to get aggregated emotion data for pie chart
-    const getAggregatedEmotionData = (data: IMetricData[]) => {
-        try {
-            logger.debug('Getting aggregated emotion data from metrics:', data);
-            
-            // Initialize emotion totals
-            const emotionTotals = {
-                happy: 0,
-                sad: 0,
-                angry: 0,
-                surprised: 0,
-                neutral: 0
-            };
-            let totalConfidence = 0;
-            let validEmotionCount = 0;
-
-            // Sum up all emotions, weighted by confidence
-            data.forEach(metric => {
-                if (metric.analysis?.emotion?.emotions) {
-                    const emotions = metric.analysis.emotion.emotions;
-                    const confidence = metric.analysis.emotion.confidence || 1;
-                    
-                    Object.entries(emotions).forEach(([emotion, value]) => {
-                        emotionTotals[emotion as keyof typeof emotionTotals] += value * confidence;
-                    });
-                    
-                    totalConfidence += confidence;
-                    validEmotionCount++;
-                }
-            });
-
-            // If no valid emotions found, return empty array
-            if (validEmotionCount === 0) {
-                logger.warn('No valid emotion data found');
-                return [];
-            }
-
-            // Convert totals to averages and create pie chart data
-            const result = Object.entries(emotionTotals).map(([emotion, total]) => ({
-                name: emotion,
-                value: total / validEmotionCount
-            }));
-
-            logger.debug('Processed aggregated emotion data:', result);
-            return result;
-        } catch (err) {
-            logger.error('Error processing aggregated emotion data:', err);
-            return [];
-        }
-    };
-
-    const renderParticipantSection = (participantId: string, data: IMetricData[]) => {
-        try {
-            return (
-                <div key={participantId} className='metrics-section'>
-                    <h3>Participant: {participantId}</h3>
-                    
-                    <div style={{ display: 'flex', gap: '20px' }}>
-                        {/* Engagement Score Line Chart */}
-                        <div style={{ flex: '2', height: 300 }}>
-                            <ResponsiveContainer>
-                                <LineChart data={data}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis 
-                                        dataKey="timestamp"
-                                        tickFormatter={(timestamp) => new Date(timestamp).toLocaleTimeString()}
-                                    />
-                                    <YAxis domain={[0, 1]} />
-                                    <Tooltip
-                                        labelFormatter={(timestamp) => new Date(Number(timestamp)).toLocaleString()}
-                                        formatter={(value: number) => [value.toFixed(2), 'Score']}
-                                    />
-                                    <Legend />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="score.score"
-                                        stroke="#8884d8"
-                                        name="Engagement Score"
-                                        isAnimationActive={false}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-
-                        {/* Aggregated Emotion Pie Chart */}
-                        <div style={{ flex: '1', minWidth: '300px' }}>
-                            <h4 style={{ textAlign: 'center', margin: '10px 0' }}>
-                                Emotional Distribution
-                            </h4>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <PieChart>
-                                    <Pie
-                                        data={getAggregatedEmotionData(data)}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={false}
-                                        outerRadius={100}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                        isAnimationActive={false}>
-                                        {
-                                            getAggregatedEmotionData(data).map((entry, index) => (
-                                                <Cell
-                                                    key={`cell-${index}`}
-                                                    fill={COLORS[entry.name as keyof typeof COLORS]}
-                                                />
-                                            ))
-                                        }
-                                    </Pie>
-                                    <Tooltip 
-                                        formatter={(value: number, name: string) => [`${Math.round(value * 100)}%`, name]}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-            );
-        } catch (err) {
-            logger.error('Error rendering participant section:', err);
-            return (
-                <div key={participantId} className='metrics-section'>
-                    <h3>Error displaying metrics for participant: {participantId}</h3>
-                </div>
-            );
-        }
-    };
+    const renderRow = useCallback(({ index, style }) => (
+        <div style={style}>
+            <ParticipantSection
+                participantId={processedData[index].participantId}
+                data={processedData[index].data}
+            />
+        </div>
+    ), [processedData]);
 
     return (
         <Dialog
-            ok = {{ translationKey: 'dialog.close' }}
-            onSubmit = { onClose }
-            size = 'large'
-            titleKey = 'dialog.engagementMetrics'>
-            <div className = 'engagement-metrics-content' style={{ maxHeight: '80vh', overflowY: 'auto' }}>
-                {error && (
-                    <div className="error-message" style={{ color: 'red', padding: '10px', marginBottom: '10px' }}>
-                        {error}
-                    </div>
-                )}
-                {participantData.map(({ participantId, data }) => 
-                    renderParticipantSection(participantId, data)
-                )}
+            onClose={onClose}
+            size="large"
+            className="engagement-metrics-modal"
+        >
+            <div className="modal-header">
+                <h2>{t('engagementMetrics.title')}</h2>
+                {error && <div className="error-message">{error}</div>}
+            </div>
+            
+            <div className="modal-content" style={{ height: '80vh' }}>
+                <AutoSizer>
+                    {({ width, height }) => (
+                        <List
+                            width={width}
+                            height={height}
+                            rowCount={processedData.length}
+                            rowHeight={PARTICIPANT_SECTION_HEIGHT}
+                            rowRenderer={renderRow}
+                            overscanRowCount={2}
+                        />
+                    )}
+                </AutoSizer>
             </div>
         </Dialog>
     );
 };
 
-export default EngagementMetricsModal; 
+export default React.memo(EngagementMetricsModal); 

@@ -7,6 +7,7 @@ import { FacialAnalysis, EmotionAnalysis, EngagementScore, GazeAnalysis } from '
  * @param emotion - Emotion analysis results
  * @param gaze - Gaze analysis results
  * @param timestamp - Timestamp of the analysis
+ * @param previousScore - The previous smoothed score
  * @returns EngagementScore
  */
 export function calculateEngagementScore(
@@ -14,21 +15,24 @@ export function calculateEngagementScore(
     emotion: EmotionAnalysis,
     gaze: GazeAnalysis,
     timestamp: number,
+    previousScore: EngagementScore | null = null
 ): EngagementScore {
-    // Calculate eye contact score based on gaze analysis
+    // Calculate individual scores
     const eyeContact = calculateEyeContactScore(gaze);
-
-    // Calculate emotion score based on emotion analysis
     const emotionScore = calculateEmotionScore(emotion);
-
-    // Calculate attention score based on facial landmarks and gaze
     const attention = calculateAttentionScore(facial, gaze);
 
-    // Calculate overall engagement score - weight eye contact and attention more heavily
-    const score = (eyeContact * 0.4 + emotionScore * 0.2 + attention * 0.4);
+    // Calculate raw score with adjusted weights
+    const rawScore = (eyeContact * 0.35 + emotionScore * 0.3 + attention * 0.35);
+
+    // Apply smoothing if we have a previous score
+    const smoothedScore = smoothScore(
+        rawScore,
+        previousScore?.score ?? null
+    );
 
     return {
-        score,
+        score: smoothedScore,
         factors: {
             eyeContact,
             emotion: emotionScore,
@@ -50,22 +54,72 @@ function calculateEyeContactScore(gaze: GazeAnalysis): number {
     return Math.max(0, 1 - gazeDeviation) * gaze.confidence;
 }
 
-function calculateEmotionScore(emotion: EmotionAnalysis): number {
-    // Weight emotions based on engagement level:
-    // - happy: strongly engaged (1.2x)
-    // - angry: engaged (1.0x)
-    // - surprised: engaged (0.8x)
-    // - sad: weakly engaged (0.4x)
-    // - neutral: disengaged (-0.8x)
-    const score = (
-        emotion.emotions.happy * 1.2
-        + emotion.emotions.angry * 1.0
-        + emotion.emotions.surprised * 0.8
-        + emotion.emotions.sad * 0.4
-        - emotion.emotions.neutral * 0.8
-    );
+/**
+ * Smooths engagement scores over time using exponential moving average.
+ * @param currentScore - The current raw engagement score
+ * @param previousScore - The previous smoothed score
+ * @param alpha - Smoothing factor (0-1), lower values mean more smoothing
+ */
+function smoothScore(currentScore: number, previousScore: number | null, alpha: number = 0.3): number {
+    if (previousScore === null) {
+        return currentScore;
+    }
+    return alpha * currentScore + (1 - alpha) * previousScore;
+}
 
-    return Math.max(0, Math.min(1, score));
+function calculateEmotionScore(emotion: EmotionAnalysis): number {
+    // Enhanced emotion scoring with context
+    const emotionWeights = {
+        happy: {
+            weight: 1.2,
+            threshold: 0.3, // Minimum threshold for considering happiness
+            boost: 0.2 // Additional boost if above threshold
+        },
+        angry: {
+            weight: 0.8, // Reduced from 1.0 as anger might indicate frustration
+            threshold: 0.4,
+            penalty: 0.3 // Penalty if anger is too high
+        },
+        surprised: {
+            weight: 0.9, // Increased as surprise often indicates engagement
+            threshold: 0.2,
+            boost: 0.1
+        },
+        sad: {
+            weight: 0.3, // Reduced as sadness usually indicates disengagement
+            threshold: 0.5,
+            penalty: 0.2
+        },
+        neutral: {
+            weight: 0.5, // Adjusted from negative to neutral
+            threshold: 0.7,
+            penalty: 0.1
+        }
+    };
+
+    let score = 0;
+    let totalWeight = 0;
+
+    // Calculate weighted score with thresholds and modifiers
+    Object.entries(emotion.emotions).forEach(([emotionType, value]) => {
+        const config = emotionWeights[emotionType as keyof typeof emotionWeights];
+        let emotionScore = value * config.weight;
+
+        // Apply threshold effects
+        if (value > config.threshold) {
+            emotionScore += config.boost || 0;
+            emotionScore -= config.penalty || 0;
+        }
+
+        score += emotionScore;
+        totalWeight += config.weight;
+    });
+
+    // Normalize score
+    const normalizedScore = score / totalWeight;
+
+    // Apply confidence weighting
+    return Math.max(0, Math.min(1, normalizedScore * emotion.confidence));
 }
 
 function calculateAttentionScore(facial: FacialAnalysis, gaze: GazeAnalysis): number {

@@ -2,6 +2,10 @@ import { IReduxState } from '../app/types';
 import { getFeatureFlag } from '../base/flags/functions';
 import { isLocalParticipantModerator } from '../base/participants/functions';
 
+interface EngagementMetricsConfig {
+    enabled?: boolean;
+}
+
 /**
  * Returns the engagement metrics state.
  *
@@ -17,7 +21,7 @@ const getEngagementMetricsState = (state: IReduxState) => state['features/engage
  * @returns {boolean}
  */
 export const isEngagementMetricsEnabled = (state: IReduxState): boolean => {
-    const { engagementMetrics = {} } = state['features/base/config'];
+    const { engagementMetrics = {} as EngagementMetricsConfig } = state['features/base/config'];
 
     return Boolean(engagementMetrics.enabled || getFeatureFlag(state, 'engagementMetrics'));
 };
