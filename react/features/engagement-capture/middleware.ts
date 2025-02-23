@@ -75,7 +75,9 @@ MiddlewareRegistry.register(store => next => async action => {
 
     // Get participant identifier with fallbacks
     let participantId;
-    if (localParticipant.email) {
+    if (localParticipant.name) {
+        participantId = localParticipant.name;
+    } else if (localParticipant.email) {
         participantId = localParticipant.email.replace(/[@.]/g, '_');
     } else if (localParticipant.jwtId) {
         participantId = localParticipant.jwtId;

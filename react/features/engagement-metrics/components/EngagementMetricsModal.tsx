@@ -114,10 +114,20 @@ const MemoizedLineChart: React.FC<{ data: IMetricData[] }> = React.memo(({ data 
                 domain={['dataMin', 'dataMax']}
                 tickFormatter={(timestamp) => new Date(timestamp).toLocaleTimeString()}
             />
-            <YAxis domain={[0, 1]} />
+            <YAxis domain={[0, 1]} tickFormatter={(value) => `${Math.round(value * 100)}%`} />
             <Tooltip
-                labelFormatter={(timestamp) => new Date(Number(timestamp)).toLocaleString()}
-                contentStyle={{ background: '#fff', border: '1px solid #ccc' }}
+                contentStyle={{ 
+                    backgroundColor: 'var(--backgroundSecondary)',
+                    border: '1px solid var(--primaryButtonBackground)',
+                    borderRadius: '4px',
+                    color: 'var(--textColor)'
+                }}
+                formatter={(value: number) => [`${Math.round(value * 100)}%`, 'Engagement Score']}
+                labelFormatter={(timestamp) => new Date(timestamp).toLocaleString(undefined, {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                })}
             />
             <Legend />
             <Line 
@@ -162,7 +172,7 @@ const ParticipantSection: React.FC<{
     
     return (
         <div className='metrics-section'>
-            <h3>Participant: {participantId}</h3>
+            <h3>{participantId}</h3>
             <div style={{ display: 'flex', gap: CHART_MARGIN }}>
                 <div style={{ flex: '2' }}>
                     <MemoizedLineChart data={data} />
@@ -254,6 +264,7 @@ const EngagementMetricsModal: React.FC<IProps> = ({ onClose }) => {
     const processedData = useMemo(() => {
         try {
             return Array.from(processMetricsData(metricsData).entries())
+                .sort(([idA], [idB]) => idA.localeCompare(idB))  // Sort by participant ID
                 .map(([participantId, data]) => ({
                     participantId,
                     data
@@ -319,12 +330,17 @@ const EngagementMetricsModal: React.FC<IProps> = ({ onClose }) => {
             onClose={onClose}
             size="large"
             className="engagement-metrics-modal"
+            titleKey="dialog.engagementMetrics"
         >
-            <div className="modal-header">
-                <h2>{t('engagementMetrics.title')}</h2>
-                {error && <div className="error-message">{error}</div>}
-            </div>
-            
+            {error && (
+                <div className="error-message" style={{
+                    color: 'var(--textError)',
+                    padding: '8px 0',
+                    textAlign: 'center'
+                }}>
+                    {error}
+                </div>
+            )}
             <div className="modal-content" style={{ height: '80vh' }}>
                 <AutoSizer>
                     {({ width, height }) => (
