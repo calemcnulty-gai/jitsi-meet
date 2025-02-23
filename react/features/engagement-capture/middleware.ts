@@ -1,4 +1,3 @@
-import { AnyAction } from 'redux';
 import MiddlewareRegistry from '../base/redux/MiddlewareRegistry';
 import { getCurrentConference } from '../base/conference/functions';
 import { TRACK_ADDED, TRACK_UPDATED, TRACK_REMOVED } from '../base/tracks/actionTypes';

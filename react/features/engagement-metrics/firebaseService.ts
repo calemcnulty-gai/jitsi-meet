@@ -1,17 +1,10 @@
 import { 
     getFirestore, 
     collection, 
-    doc,
     query, 
     where, 
-    orderBy, 
-    getDocs,
+    orderBy,
     onSnapshot,
-    DocumentData, 
-    QuerySnapshot,
-    CollectionReference,
-    DocumentReference,
-    QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { initializeApp, getApps } from 'firebase/app';
 import logger from './logger';
@@ -152,28 +145,17 @@ export function subscribeToEngagementMetrics(
                 // Convert Firestore documents to our data format
                 const metricsData: IMetricData[] = snapshot.docs.map(doc => {
                     const rawData = doc.data();
-                    console.log('Raw document data:', rawData);
-                    console.log('Raw document analysis:', rawData.analysis);
-                    console.log('Raw document emotion data:', rawData.analysis?.emotion);
-                    
                     const data = rawData as IMetricData;
                     return data;
                 });
-
-                console.log('Processed metrics data:', metricsData);
-                console.log('First metric analysis:', metricsData[0]?.analysis);
-                console.log('First metric emotion:', metricsData[0]?.analysis?.emotion);
-
                 logger.info('Sending metrics data:', metricsData.length, 'data points');
                 callback(metricsData);
             } catch (error) {
-                console.error('Error processing metrics:', error);
                 logger.error('Error processing metrics:', error);
                 callback([]);
             }
         },
         error => {
-            console.error('Firestore subscription error:', error);
             logger.error('Firestore subscription error:', error);
             callback([]);
         }
