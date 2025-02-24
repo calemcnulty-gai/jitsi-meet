@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, withTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
 
@@ -58,6 +58,8 @@ const useStyles = makeStyles()(() => {
         }
     };
 });
+
+const TranslatedEngagementMetricsButton = withTranslation()(EngagementMetricsButton);
 
 /**
  * A component that renders the main toolbar.
@@ -275,7 +277,7 @@ export default function Toolbox({
                                 key = { key } />))}
 
                         {/* BRUTE FORCE ENGAGEMENT METRICS BUTTON */}
-                        <EngagementMetricsButton
+                        <TranslatedEngagementMetricsButton
                             buttonKey = 'engagement-metrics'
                             key = 'engagement-metrics'
                             visible = { true } />
