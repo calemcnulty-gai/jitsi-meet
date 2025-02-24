@@ -216,3 +216,15 @@ const MyJitsiComponent: React.FC = () => {
 8. [React SDK Guide](https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-react-sdk)
 9. [Server-side Components](https://jitsi.github.io/handbook/docs/devops-guide/devops-guide-manual)
 10. [Configuration Guide](https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-configuration)
+
+## Summary
+
+To fully implement the engagement-metrics plugin as a Redux-controlled plugin:
+
+- **Dispatch Redux Actions:** Update the open/close action creators to dispatch Redux actions that modify the modal state.
+- **Create a Modal Container:** Develop a container component that reads the `modalOpen` flag from Redux and conditionally renders the modal.
+- **Revise the Reducer:** Ensure the reducer consistently manages the `modalOpen` property.
+- **Align Helper Functions:** Update helper functions to reference the correct state property.
+- **Global Integration:** Ensure the modal container is integrated within the main application so it can immediately respond to state changes.
+
+Following these steps will ensure that engagement-metrics is fully integrated with Redux, adhering to the plugin architecture and improving maintainability and scalability.
